@@ -1,0 +1,1 @@
+["amount_scaled", "transactions_last_24h", "card_age_months", "merchant_enc", "location_enc", "time_enc", "device_enc", "is_high_risk_location", "is_late_night", "is_vpn", "is_new_device", "is_high_risk_merchant", "is_new_card", "is_high_amount", "is_micro_transaction", "is_high_velocity", "amount_per_card_age", "velocity_x_amount", "risk_score"]
