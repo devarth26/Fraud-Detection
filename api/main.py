@@ -372,8 +372,8 @@ def predict(transaction: TransactionInput, db: Session = Depends(get_db)):
     orchestration   = orchestrate_risk(ensemble_result, lstm_result, ae_result, rule_result)
     persona_result  = detect_fraud_persona(transaction, rule_result, ensemble_result, card_stats)
 
-    is_fraud            = orchestration["is_fraud"]
-    combined_confidence = orchestration["weighted_score"]
+    is_fraud            = bool(orchestration["is_fraud"])
+    combined_confidence = float(orchestration["weighted_score"])
     risk_tier           = orchestration["risk_tier"]
 
     explanation = generate_llm_explanation(
