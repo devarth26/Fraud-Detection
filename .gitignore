@@ -6,8 +6,6 @@ __pycache__/
 data/creditcard.csv
 data/processed/
 notebooks/.ipynb_checkpoints/
-artifacts/ae_scaler.pkl
-artifacts/shap_explainer.pkl
 frontend/node_modules/
 frontend/dist/
 *.ipynb_checkpoints
