@@ -1,0 +1,5 @@
+# Local development: runtime deps + test and lint tools.
+-r requirements-deploy.txt
+pytest==9.1.1
+ruff==0.17.2
+httpx==0.28.1

@@ -1,0 +1,18 @@
+# Lightweight set for lint + unit tests + the stub-model eval smoke test.
+# No torch / xgboost / shap: tests use fakes, and the eval smoke test stubs the model layer.
+pytest==9.1.1
+ruff==0.17.2
+httpx==0.28.1
+fastapi==0.136.1
+starlette==1.0.0
+pydantic==2.13.4
+SQLAlchemy==2.0.49
+python-dotenv==1.2.2
+groq==1.2.0
+numpy==2.4.5
+scikit-learn==1.8.0
+langgraph==1.2.16
+langchain-core==1.7.0
+langchain-community==0.4.2
+langchain-text-splitters==1.1.3
+pypdf==5.9.0

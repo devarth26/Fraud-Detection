@@ -9,6 +9,8 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql://fraud:fraud@db:5432/frauddb
+      # Pause/resume of human reviews survives restarts when this is set (otherwise in-memory):
+      # LANGGRAPH_POSTGRES_URL: postgresql://fraud:fraud@db:5432/frauddb
     depends_on:
       - db
 
@@ -23,6 +25,7 @@ services:
       - /app/node_modules
     depends_on:
       - api
+
   db:
     image: postgres:16
     environment:

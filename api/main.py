@@ -10,6 +10,8 @@ from pathlib import Path
 from .schemas import TransactionInput
 from .model import predict_ensemble, predict_lstm, predict_autoencoder
 from .database import get_db, Transaction, CardProfile, get_card_history, save_card_history, get_card_stats
+from .agent_routes import router as agent_router      # NEW: /score and /agent/* endpoints
+from .scoring import card_id_for, history_encoders    # NEW: stable (restart-safe) hashing
 
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -22,6 +24,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+app.include_router(agent_router)  # NEW
 
 
 def rule_engine(transaction: TransactionInput) -> dict:
@@ -361,7 +365,7 @@ def root():
 
 @app.post("/predict")
 def predict(transaction: TransactionInput, db: Session = Depends(get_db)):
-    card_id    = hash(transaction.device_match) % 1000
+    card_id    = card_id_for(transaction.device_match)  # was hash(...) % 1000, which changes on every restart
     history    = get_card_history(db, card_id)
     card_stats = get_card_stats(db, card_id)
 
@@ -398,12 +402,7 @@ def predict(transaction: TransactionInput, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(record)
 
-    encoders = {
-        "merchant_enc": hash(transaction.merchant_category) % 8,
-        "location_enc": hash(transaction.location) % 4,
-        "time_enc":     hash(transaction.time_of_day) % 4,
-        "device_enc":   hash(transaction.device_match) % 5,
-    }
+    encoders = history_encoders(transaction)  # was hash(...) % N, which changes on every restart
     save_card_history(db, card_id, transaction, encoders, is_fraud)
 
     return {
