@@ -1,0 +1,687 @@
+{
+  "meta": {
+    "timestamp": "2026-10-29T12:41:23",
+    "llm_provider": "ollama / llama3.1",
+    "embeddings": "huggingface",
+    "models": "real FraudShield artifacts"
+  },
+  "summary": {
+    "cases": 20,
+    "intent_accuracy_pct": 100.0,
+    "tool_set_exact_match_pct": 100.0,
+    "tool_precision_pct": 100.0,
+    "tool_recall_pct": 100.0,
+    "policy_labelled_cases": 14,
+    "retrieval_hit_pct": 100.0,
+    "citation_hit_pct": 92.9,
+    "irrelevant_citation_rate_pct": 5.3,
+    "llm_intent_pct": 85.0,
+    "llm_plan_pct": 100.0,
+    "plan_corrected_pct": 40.0,
+    "tool_set_exact_llm_only_pct": 60.0,
+    "llm_intent_correct_pct": 85.0,
+    "llm_narrative_pct": 90.0
+  },
+  "rows": [
+    {
+      "id": "C01",
+      "query": "Why was this transaction flagged, and what should I do?",
+      "intent": "full_investigation",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [
+        "get_card_history"
+      ],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "explain_shap",
+        "get_card_history",
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_expected": [
+        "explain_shap",
+        "get_card_history",
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_exact": true,
+      "tp": 4,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": true,
+      "retrieval_hit": true,
+      "citation_hit": true,
+      "cited": [
+        "POL-001"
+      ],
+      "cited_irrelevant": [],
+      "risk_tier": "MEDIUM",
+      "status": "completed"
+    },
+    {
+      "id": "C02",
+      "query": "Why was this flagged?",
+      "intent": "explain_flag",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "explain_shap",
+        "score_transaction"
+      ],
+      "tools_expected": [
+        "explain_shap",
+        "score_transaction"
+      ],
+      "tools_exact": true,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": false,
+      "retrieval_hit": null,
+      "citation_hit": null,
+      "cited": [],
+      "cited_irrelevant": [],
+      "risk_tier": "MEDIUM",
+      "status": "completed"
+    },
+    {
+      "id": "C03",
+      "query": "What should I do with this transaction?",
+      "intent": "recommend_action",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_expected": [
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_exact": true,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": true,
+      "retrieval_hit": true,
+      "citation_hit": true,
+      "cited": [
+        "POL-001"
+      ],
+      "cited_irrelevant": [],
+      "risk_tier": "MEDIUM",
+      "status": "completed"
+    },
+    {
+      "id": "C04",
+      "query": "Show me this card's spending history and baseline.",
+      "intent": "history_check",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [],
+      "plan_removed": [
+        "score_transaction"
+      ],
+      "narrative_source": "llm",
+      "tools_used": [
+        "get_card_history"
+      ],
+      "tools_expected": [
+        "get_card_history"
+      ],
+      "tools_exact": true,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": false,
+      "retrieval_hit": null,
+      "citation_hit": null,
+      "cited": [],
+      "cited_irrelevant": [],
+      "risk_tier": null,
+      "status": "completed"
+    },
+    {
+      "id": "C05",
+      "query": "What is our policy on temporary holds and how long can they last?",
+      "intent": "policy_question",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "search_policy"
+      ],
+      "tools_expected": [
+        "search_policy"
+      ],
+      "tools_exact": true,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": true,
+      "retrieval_hit": true,
+      "citation_hit": true,
+      "cited": [
+        "POL-008"
+      ],
+      "cited_irrelevant": [],
+      "risk_tier": null,
+      "status": "completed"
+    },
+    {
+      "id": "C06",
+      "query": "When does a case need human review, and what is the response time?",
+      "intent": "policy_question",
+      "intent_ok": true,
+      "intent_source": "guard",
+      "plan_source": "llm",
+      "plan_added": [],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "search_policy"
+      ],
+      "tools_expected": [
+        "search_policy"
+      ],
+      "tools_exact": true,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": true,
+      "retrieval_hit": true,
+      "citation_hit": true,
+      "cited": [
+        "POL-010"
+      ],
+      "cited_irrelevant": [],
+      "risk_tier": null,
+      "status": "completed"
+    },
+    {
+      "id": "C07",
+      "query": "How do we handle friendly fraud disputes?",
+      "intent": "policy_question",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "search_policy"
+      ],
+      "tools_expected": [
+        "search_policy"
+      ],
+      "tools_exact": true,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": true,
+      "retrieval_hit": true,
+      "citation_hit": true,
+      "cited": [
+        "POL-009"
+      ],
+      "cited_irrelevant": [],
+      "risk_tier": null,
+      "status": "completed"
+    },
+    {
+      "id": "C08",
+      "query": "What are the rules for crypto purchases on new cards?",
+      "intent": "policy_question",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "search_policy"
+      ],
+      "tools_expected": [
+        "search_policy"
+      ],
+      "tools_exact": true,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": true,
+      "retrieval_hit": true,
+      "citation_hit": true,
+      "cited": [
+        "POL-006"
+      ],
+      "cited_irrelevant": [],
+      "risk_tier": null,
+      "status": "completed"
+    },
+    {
+      "id": "C09",
+      "query": "Why was this transaction flagged, and what should I do?",
+      "intent": "full_investigation",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [
+        "get_card_history"
+      ],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "explain_shap",
+        "get_card_history",
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_expected": [
+        "explain_shap",
+        "get_card_history",
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_exact": true,
+      "tp": 4,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": true,
+      "retrieval_hit": true,
+      "citation_hit": true,
+      "cited": [
+        "POL-002",
+        "POL-003",
+        "POL-005"
+      ],
+      "cited_irrelevant": [
+        "POL-003"
+      ],
+      "risk_tier": "LOW",
+      "status": "completed"
+    },
+    {
+      "id": "C10",
+      "query": "What should I do about this one?",
+      "intent": "recommend_action",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_expected": [
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_exact": true,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": true,
+      "retrieval_hit": true,
+      "citation_hit": true,
+      "cited": [
+        "POL-002"
+      ],
+      "cited_irrelevant": [],
+      "risk_tier": "LOW",
+      "status": "completed"
+    },
+    {
+      "id": "C11",
+      "query": "Why was this transaction flagged, and what should I do?",
+      "intent": "full_investigation",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [
+        "get_card_history"
+      ],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "explain_shap",
+        "get_card_history",
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_expected": [
+        "explain_shap",
+        "get_card_history",
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_exact": true,
+      "tp": 4,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": true,
+      "retrieval_hit": true,
+      "citation_hit": true,
+      "cited": [
+        "POL-003",
+        "POL-006"
+      ],
+      "cited_irrelevant": [],
+      "risk_tier": "HIGH",
+      "status": "reviewed"
+    },
+    {
+      "id": "C12",
+      "query": "Explain the reason this was flagged.",
+      "intent": "explain_flag",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "explain_shap",
+        "score_transaction"
+      ],
+      "tools_expected": [
+        "explain_shap",
+        "score_transaction"
+      ],
+      "tools_exact": true,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": false,
+      "retrieval_hit": null,
+      "citation_hit": null,
+      "cited": [],
+      "cited_irrelevant": [],
+      "risk_tier": "HIGH",
+      "status": "reviewed"
+    },
+    {
+      "id": "C13",
+      "query": "Why was this transaction flagged, and what should I do?",
+      "intent": "full_investigation",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [
+        "get_card_history"
+      ],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "explain_shap",
+        "get_card_history",
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_expected": [
+        "explain_shap",
+        "get_card_history",
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_exact": true,
+      "tp": 4,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": true,
+      "retrieval_hit": true,
+      "citation_hit": true,
+      "cited": [
+        "POL-004",
+        "POL-005"
+      ],
+      "cited_irrelevant": [],
+      "risk_tier": "HIGH",
+      "status": "reviewed"
+    },
+    {
+      "id": "C14",
+      "query": "What should I do with this large transfer?",
+      "intent": "recommend_action",
+      "intent_ok": true,
+      "intent_source": "guard",
+      "plan_source": "llm",
+      "plan_added": [],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_expected": [
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_exact": true,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": true,
+      "retrieval_hit": true,
+      "citation_hit": true,
+      "cited": [
+        "POL-004",
+        "POL-005"
+      ],
+      "cited_irrelevant": [],
+      "risk_tier": "HIGH",
+      "status": "reviewed"
+    },
+    {
+      "id": "C15",
+      "query": "Why was this transaction flagged, and what should I do?",
+      "intent": "full_investigation",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [
+        "get_card_history"
+      ],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "explain_shap",
+        "get_card_history",
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_expected": [
+        "explain_shap",
+        "get_card_history",
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_exact": true,
+      "tp": 4,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": true,
+      "retrieval_hit": true,
+      "citation_hit": false,
+      "cited": [
+        "POL-001"
+      ],
+      "cited_irrelevant": [],
+      "risk_tier": "MEDIUM",
+      "status": "completed"
+    },
+    {
+      "id": "C16",
+      "query": "Why was this transaction flagged, and what should I do?",
+      "intent": "full_investigation",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [
+        "get_card_history"
+      ],
+      "plan_removed": [],
+      "narrative_source": "template",
+      "tools_used": [
+        "explain_shap",
+        "get_card_history",
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_expected": [
+        "explain_shap",
+        "get_card_history",
+        "score_transaction",
+        "search_policy"
+      ],
+      "tools_exact": true,
+      "tp": 4,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": false,
+      "retrieval_hit": null,
+      "citation_hit": null,
+      "cited": [],
+      "cited_irrelevant": [],
+      "risk_tier": "LOW",
+      "status": "completed"
+    },
+    {
+      "id": "C17",
+      "query": "How has this card behaved before? Any past transactions?",
+      "intent": "history_check",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [],
+      "plan_removed": [
+        "score_transaction",
+        "search_policy"
+      ],
+      "narrative_source": "llm",
+      "tools_used": [
+        "get_card_history"
+      ],
+      "tools_expected": [
+        "get_card_history"
+      ],
+      "tools_exact": true,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": false,
+      "retrieval_hit": null,
+      "citation_hit": null,
+      "cited": [],
+      "cited_irrelevant": [],
+      "risk_tier": null,
+      "status": "completed"
+    },
+    {
+      "id": "C18",
+      "query": "Why did the model score this transaction the way it did?",
+      "intent": "explain_flag",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [],
+      "plan_removed": [],
+      "narrative_source": "template",
+      "tools_used": [
+        "explain_shap",
+        "score_transaction"
+      ],
+      "tools_expected": [
+        "explain_shap",
+        "score_transaction"
+      ],
+      "tools_exact": true,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": false,
+      "retrieval_hit": null,
+      "citation_hit": null,
+      "cited": [],
+      "cited_irrelevant": [],
+      "risk_tier": "LOW",
+      "status": "completed"
+    },
+    {
+      "id": "C19",
+      "query": "What is the threshold for requiring a second analyst approval on large transactions?",
+      "intent": "policy_question",
+      "intent_ok": true,
+      "intent_source": "llm",
+      "plan_source": "llm",
+      "plan_added": [],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "search_policy"
+      ],
+      "tools_expected": [
+        "search_policy"
+      ],
+      "tools_exact": true,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": true,
+      "retrieval_hit": true,
+      "citation_hit": true,
+      "cited": [
+        "POL-005"
+      ],
+      "cited_irrelevant": [],
+      "risk_tier": null,
+      "status": "completed"
+    },
+    {
+      "id": "C20",
+      "query": "How should an analyst handle a suspected money mule?",
+      "intent": "policy_question",
+      "intent_ok": true,
+      "intent_source": "guard",
+      "plan_source": "llm",
+      "plan_added": [],
+      "plan_removed": [],
+      "narrative_source": "llm",
+      "tools_used": [
+        "search_policy"
+      ],
+      "tools_expected": [
+        "search_policy"
+      ],
+      "tools_exact": true,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "has_policy_label": true,
+      "retrieval_hit": true,
+      "citation_hit": true,
+      "cited": [
+        "POL-004"
+      ],
+      "cited_irrelevant": [],
+      "risk_tier": null,
+      "status": "completed"
+    }
+  ]
+}
