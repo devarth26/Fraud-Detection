@@ -44,9 +44,9 @@ Console path (documented by AWS): **ECS -> Express Mode -> Create service**.
 - Image: `ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/fraudshield-api:latest` (push once manually first, see step 5)
 - Container port: `8000`; health check path: `/agent/health`
 - CPU/memory: start at 1 vCPU / 4 GB (torch + SHAP + embedding model need real memory; 0.5 GB will be OOM-killed)
-- Environment variables: `EMBEDDINGS_PROVIDER=huggingface`, `LLM_PROVIDER=groq`, `REVIEW_THRESHOLD=0.75`,
+- Environment variables: `EMBEDDINGS_PROVIDER=huggingface`, `LLM_PROVIDER=bedrock` + `BEDROCK_MODEL_ID` (or `groq`; Ollama does not fit on a small Fargate task), `REVIEW_THRESHOLD=0.75`,
   `POLICY_S3_BUCKET=fraudshield-docs-<account id>`
-- Secrets (from Secrets Manager): `DATABASE_URL`, `LANGGRAPH_POSTGRES_URL`, `GROQ_API_KEY`
+- Secrets (from Secrets Manager): `DATABASE_URL`, `LANGGRAPH_POSTGRES_URL` (and `GROQ_API_KEY` only if you choose Groq)
 - Roles: the task execution role must be able to read those secrets and pull from ECR; the **task role** needs
   `s3:GetObject` + `s3:ListBucket` on the bucket (and `bedrock:InvokeModel` only if you switch `LLM_PROVIDER=bedrock`).
 

@@ -12,3 +12,4 @@ frontend/dist/
 
 eval/results/
 *.db
+eval/results*/

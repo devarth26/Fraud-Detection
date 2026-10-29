@@ -17,7 +17,7 @@ Items are labelled by how I established them.
 2. **`TRIPLE_THREAT_VPN_LOCATION_DEVICE` can never fire.** *(verified in code + notebook)* It requires `"VPN"` and `"New device"` to both appear in
    `device_match`, but the training data has five mutually exclusive values (`"VPN / proxy detected"`, `"New device, new IP"`, ...). The hard
    override attached to this rule is dead code, and the persona logic cannot add the new-device and VPN points together either.
-3. **Persona logic over-reports synthetic identity.** *(observed in the eval run)* A card with no stored history gets +3 synthetic-identity points, so a
+3. **Persona logic over-reports synthetic identity, and its indicators are fixed text.** *(observed in the eval run; indicator lists verified in `api/main.py`)* The `indicators` lists (e.g. `["no_history", "new_card", "high_value_immediately"]`) are hardcoded strings returned whenever that persona wins, not evidence computed from the transaction, so a 24-month-old card still reports `new_card`. The agent therefore does not repeat the indicators, and adds a Data note to the report when the label contradicts the card age.  A card with no stored history gets +3 synthetic-identity points, so a
    36-month-old card with a large late-night purchase scored higher as "Synthetic Identity" than as "Account Takeover". The agent mitigates this
    by retrieving policy for every detected persona, but the persona output itself is questionable.
 4. **"Card" is really "device type".** *(read the code)* The schema has no card identifier; `card_id` is derived from `device_match`, which has

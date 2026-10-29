@@ -44,3 +44,15 @@ def test_score_transaction_runs_pipeline_without_db_or_llm(monkeypatch):
     assert out["risk_tier"] == "HIGH" and out["weighted_score"] == 0.9
     assert calls == ["ens", "lstm", "ae"]
     assert set(out) >= {"rules", "persona", "ensemble", "shap", "lstm", "autoencoder", "card_stats", "orchestration"}
+
+
+def test_to_native_converts_numpy_and_decimal_recursively():
+    from decimal import Decimal
+
+    import numpy as np
+
+    from api.scoring import to_native
+
+    out = to_native({"a": np.float64(1.5), "b": [np.int64(2), np.bool_(True)], "c": {"d": np.array([1.0, 2.0])}, "e": Decimal("3.5"), "f": "x"})
+    assert out == {"a": 1.5, "b": [2, True], "c": {"d": [1.0, 2.0]}, "e": 3.5, "f": "x"}
+    assert type(out["a"]) is float and type(out["b"][0]) is int and type(out["b"][1]) is bool

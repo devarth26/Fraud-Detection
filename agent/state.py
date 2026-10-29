@@ -13,6 +13,7 @@ class InvestigationState(TypedDict, total=False):
     intent_source: str          # "llm" | "heuristic"
     planned_tools: list[str]
     plan_source: str            # "llm" | "heuristic"
+    plan_added: list[str]       # tools the floor added because the planner left them out
     needs_input: Optional[str]  # set when the agent cannot proceed (missing/unknown transaction)
 
     # tool outputs
@@ -30,7 +31,8 @@ class InvestigationState(TypedDict, total=False):
     # outputs
     report: str
     policies_cited: list[str]
-    narrative_source: str       # "llm" | "template"
+    narrative_source: str       # "llm" | "template"  (who wrote the assessment)
+    selection_source: str       # "llm" | "signals"    (who chose the applicable policies)
     status: str                 # completed | reviewed | needs_input
     case_id: Optional[int]
 

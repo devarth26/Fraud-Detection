@@ -73,6 +73,7 @@ class PolicyRetriever:
                     "score": round(score, 4),
                     "matched_rules": sorted(rule_hits),
                     "matched_personas": sorted(persona_hits),
+                    "required_actions": list(m.get("required_actions", [])),
                 }
         ranked = sorted(best.values(), key=lambda d: d["score"], reverse=True)
         return ranked[:k]

@@ -86,3 +86,25 @@ def test_dependencies_inline_transaction_needs_no_lookup():
 def test_keywords_do_not_match_inside_other_words(query, intent):
     # "action" is inside "transaction"; it must not be read as a request for next steps
     assert heuristic_intent(query, True) == intent
+
+
+def test_floor_adds_tools_the_planner_left_out_and_reports_them():
+    from agent.planner import apply_required_tools
+
+    tools, added = apply_required_tools(["score_transaction", "search_policy"], "full_investigation")
+    assert tools == ["score_transaction", "explain_shap", "get_card_history", "search_policy"]
+    assert added == ["explain_shap", "get_card_history"]
+
+
+def test_floor_keeps_optional_extras_and_never_removes_anything():
+    from agent.planner import apply_required_tools
+
+    tools, added = apply_required_tools(["score_transaction", "explain_shap", "get_card_history", "search_policy"], "full_investigation")
+    assert tools == ["score_transaction", "explain_shap", "get_card_history", "search_policy"] and added == []
+    assert apply_required_tools(["get_card_history"], "history_check") == (["get_card_history"], [])
+
+
+def test_planning_prompt_includes_the_default_plan_for_the_intent():
+    llm = FakeLLM(lambda p: '{"tools": ["score_transaction"]}')
+    choose_tools(llm, "why flagged?", "explain_flag")
+    assert "Default plan for this intent: ['score_transaction', 'explain_shap']" in llm.prompts[0]

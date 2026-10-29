@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from langchain_core.tools import StructuredTool
 
+from api.scoring import to_native
+
 from .backends import Backends
 
 TOOL_DESCRIPTIONS = {
@@ -34,19 +36,19 @@ def summarise_shap(shap: dict | None, top_n: int = 5) -> dict:
 
 def build_tools(b: Backends) -> dict[str, StructuredTool]:
     def lookup_transaction(transaction_id: int) -> dict:
-        return b.get_transaction(transaction_id) or {}
+        return to_native(b.get_transaction(transaction_id) or {})
 
     def score_transaction(transaction: dict) -> dict:
-        return b.score(transaction)
+        return to_native(b.score(transaction))
 
     def explain_shap(score: dict) -> dict:
         return summarise_shap(score.get("shap"))
 
     def get_card_history(transaction: dict) -> dict:
-        return b.card_history(transaction)
+        return to_native(b.card_history(transaction))
 
     def search_policy(query: str, rule_codes: list[str] | None = None, personas: list[str] | None = None, k: int = 4) -> list:
-        return b.search_policy(query, k=k, rule_codes=rule_codes or [], personas=personas or [])
+        return to_native(b.search_policy(query, k=k, rule_codes=rule_codes or [], personas=personas or []))
 
     funcs = [lookup_transaction, score_transaction, explain_shap, get_card_history, search_policy]
     return {

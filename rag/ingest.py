@@ -16,6 +16,14 @@ _ID_RE = re.compile(r"^(?:Policy|Case) ID:\s*([A-Z]+-\d{3})\s*$", re.MULTILINE)
 _RULES_RE = re.compile(r"^Applies to rules:\s*(.+)$", re.MULTILINE)
 _PERSONAS_RE = re.compile(r"^Applies to personas:\s*(.+)$", re.MULTILINE)
 _TITLE_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
+_ACTIONS_SECTION_RE = re.compile(r"^##\s+Required actions\s*\n(.*?)(?=^##\s|\Z)", re.MULTILINE | re.DOTALL)
+_STEP_RE = re.compile(r"^\s*\d+\.\s+(.*\S)\s*$", re.MULTILINE)
+
+
+def _parse_required_actions(text: str) -> list[str]:
+    """Numbered steps from a document's "## Required actions" section (empty if it has none)."""
+    m = _ACTIONS_SECTION_RE.search(text)
+    return [s.strip() for s in _STEP_RE.findall(m.group(1))] if m else []
 
 
 def _parse_list(match: re.Match | None) -> list[str]:
@@ -44,9 +52,10 @@ def load_documents(policy_dir: Path | str = DEFAULT_POLICY_DIR) -> list[Document
             "source": str(path.relative_to(policy_dir)),
             "doc_id": doc_id,
             "doc_type": "case" if doc_id.startswith("CASE") else "policy",
-            "title": title_match.group(1).strip() if title_match else path.stem,
+            "title": re.sub(r"^(?:POL|CASE)-\d{3}\s+", "", title_match.group(1).strip()) if title_match else path.stem,
             "rule_codes": _parse_list(_RULES_RE.search(text)),
             "personas": _parse_list(_PERSONAS_RE.search(text)),
+            "required_actions": _parse_required_actions(text),
         }
         docs.append(Document(page_content=text, metadata=meta))
     if not docs:

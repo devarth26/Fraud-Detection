@@ -9,6 +9,7 @@ classifier, orchestration) instead of copying them, so the agent can never drift
 from __future__ import annotations
 
 import zlib
+from decimal import Decimal
 
 EMPTY_CARD_STATS = {
     "tx_count": 0,
@@ -20,6 +21,28 @@ EMPTY_CARD_STATS = {
     "location_diversity": 0,
     "avg_velocity": 0,
 }
+
+
+def to_native(obj):
+    """Recursively convert numpy / Decimal values to plain Python types.
+
+    The trained models return numpy scalars (float64, bool_, int64). LangGraph's checkpointer
+    serialises state with msgpack, which cannot store them, so everything crossing into the agent
+    must be plain Python.
+    """
+    if isinstance(obj, dict):
+        return {(k if isinstance(k, (str, int, float, bool)) or k is None else str(k)): to_native(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple, set)):
+        return [to_native(v) for v in obj]
+    if isinstance(obj, Decimal):
+        return float(obj)
+    item = getattr(obj, "item", None)  # numpy scalars
+    tolist = getattr(obj, "tolist", None)  # numpy arrays
+    if tolist is not None and getattr(obj, "ndim", 0) > 0:
+        return to_native(tolist())
+    if item is not None and type(obj).__module__ == "numpy":
+        return item()
+    return obj
 
 
 def stable_hash(value: str) -> int:
@@ -70,7 +93,7 @@ def score_transaction(transaction, db=None) -> dict:
     orchestration = engine.orchestrate_risk(ensemble, lstm, autoencoder, rules)
     persona = engine.detect_fraud_persona(transaction, rules, ensemble, card_stats)
 
-    return {
+    return to_native({
         "is_fraud": bool(orchestration["is_fraud"]),
         "risk_tier": orchestration["risk_tier"],
         "weighted_score": float(orchestration["weighted_score"]),
@@ -96,4 +119,4 @@ def score_transaction(transaction, db=None) -> dict:
             "anomaly_score": autoencoder["anomaly_score"],
             "threshold": autoencoder["threshold"],
         },
-    }
+    })

@@ -7,15 +7,25 @@ import os
 from langgraph.types import interrupt
 
 from .backends import Backends
-from .planner import NEEDS_TRANSACTION, choose_tools, classify_intent, enforce_dependencies, extract_transaction_id
+from .planner import (
+    NEEDS_TRANSACTION,
+    apply_required_tools,
+    choose_tools,
+    classify_intent,
+    enforce_dependencies,
+    extract_transaction_id,
+)
 from .report import (
     assemble_report,
     build_facts,
     extract_citations,
-    llm_narrative,
+    is_benign,
+    llm_assessment,
+    relevant_hits,
+    render_actions,
     review_section,
     sanitize_citations,
-    template_narrative,
+    template_assessment,
 )
 from .state import InvestigationState
 from .tools import build_tools
@@ -58,6 +68,9 @@ class InvestigationNodes:
         tools, source = choose_tools(self.llm, state["query"], state["intent"])
         if not has_any_tx and state["intent"] == "policy_question":
             tools = [t for t in tools if t not in NEEDS_TRANSACTION] or ["search_policy"]
+        added: list[str] = []
+        if has_any_tx or state["intent"] == "policy_question":
+            tools, added = apply_required_tools(tools, state["intent"])
         ordered, needs_input = enforce_dependencies(tools, has_inline, state.get("transaction_id"))
         if needs_input:
             return {
@@ -68,10 +81,12 @@ class InvestigationNodes:
                 "report": needs_input,
                 "trace": [f"plan_tools: cannot proceed - {needs_input}"],
             }
+        note = f", required tools added: {added}" if added else ""
         return {
             "planned_tools": ordered,
             "plan_source": source,
-            "trace": [f"plan_tools: {ordered} ({source})"],
+            "plan_added": added,
+            "trace": [f"plan_tools: {ordered} ({source}{note})"],
         }
 
     # 3. data tools ---------------------------------------------------------------------------
@@ -150,20 +165,51 @@ class InvestigationNodes:
     # 5. draft --------------------------------------------------------------------------------
     def draft_report(self, state: InvestigationState) -> dict:
         working = {**state, "needs_review": requires_review(state)}
-        narrative = llm_narrative(self.llm, working, build_facts(working)) if self.llm else None
-        source = "llm" if narrative else "template"
-        if narrative is None:
-            narrative = template_narrative(working)
-        allowed = {h["doc_id"] for h in working.get("policy_hits", [])}
-        narrative, removed = sanitize_citations(narrative, allowed)
-        cited = [c for c in extract_citations(narrative) if c in allowed]
-        trace = [f"draft_report: narrative={source}, cited={cited}"]
+        hits = working.get("policy_hits") or []
+        by_id = {h["doc_id"]: h for h in hits}
+        rank = {h["doc_id"]: i for i, h in enumerate(hits)}
+        score = working.get("score")
+        benign = bool(score) and is_benign(score)
+        trace: list[str] = []
+
+        assessment, llm_selection = (None, None)
+        if self.llm and not benign:
+            assessment, llm_selection = llm_assessment(self.llm, working, build_facts(working))
+        narrative_source = "llm" if assessment else "template"
+        if assessment is None:
+            assessment = template_assessment(working)
+
+        reasons: dict[str, str] = {}
+        selection_source = "signals"
+        if benign:
+            selected: list[dict] = []
+        elif llm_selection is not None:
+            valid = [(pid, why) for pid, why in llm_selection if pid in by_id]
+            unknown = [pid for pid, _ in llm_selection if pid not in by_id]
+            if unknown:
+                trace.append(f"draft_report: dropped unverified policy ids from the LLM selection {unknown}")
+            if valid:
+                selected = [by_id[pid] for pid in dict.fromkeys(pid for pid, _ in valid)]
+                reasons = {pid: why for pid, why in valid if why}
+                selection_source = "llm"
+            else:
+                selected = relevant_hits(hits)
+                trace.append("draft_report: LLM selected no retrieved policy, used rule/persona signals instead")
+        else:
+            selected = relevant_hits(hits)
+        selected.sort(key=lambda h: rank[h["doc_id"]])
+
+        assessment, removed = sanitize_citations(assessment, set(by_id))
         if removed:
             trace.append(f"draft_report: removed unverified references {removed}")
+        cited = [h["doc_id"] for h in selected]
+        cited += [c for c in extract_citations(assessment) if c in by_id and c not in cited]
+        trace.insert(0, f"draft_report: assessment={narrative_source}, policies={selection_source}, cited={cited}")
         return {
-            "report": assemble_report(working, narrative),
+            "report": assemble_report(working, assessment, render_actions(selected, reasons)),
             "policies_cited": cited,
-            "narrative_source": source,
+            "narrative_source": narrative_source,
+            "selection_source": selection_source,
             "needs_review": working["needs_review"],
             "trace": trace,
         }

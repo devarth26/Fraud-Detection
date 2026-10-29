@@ -1,6 +1,6 @@
 """Evaluate the agent on labelled cases.
 
-    python -m eval.run_eval                      # real models + real LLM (the numbers to quote)
+    python -m eval.run_eval                      # real models + real LLM (the numbers to quote)\n                                                 # (a local Llama 3.1 run takes a while: ~3 LLM calls per case)
     python -m eval.run_eval --no-llm             # heuristic planner only (the fallback path)
     python -m eval.run_eval --stub-models        # no model artifacts needed; pipeline check only
 
@@ -48,6 +48,7 @@ def evaluate(service, cases: list[dict], sleep: float = 0.0) -> list[dict]:
             "intent_ok": resp["intent"] == c["expected_intent"],
             "intent_source": resp["intent_source"],
             "plan_source": resp["plan_source"],
+            "plan_added": resp.get("plan_added", []),
             "narrative_source": resp["narrative_source"],
             "tools_used": sorted(used),
             "tools_expected": sorted(expected),
@@ -83,6 +84,11 @@ def summarise(rows: list[dict]) -> dict:
         "retrieval_hit_pct": pct(sum(r["retrieval_hit"] for r in labelled), len(labelled)),
         "citation_hit_pct": pct(sum(r["citation_hit"] for r in labelled), len(labelled)),
         "irrelevant_citation_rate_pct": pct(irrelevant_total, cited_total),
+        # How often the LLM actually did the work. Near 0 with an LLM configured means it is failing silently.
+        "llm_intent_pct": pct(sum(r["intent_source"] == "llm" for r in rows), n),
+        "llm_plan_pct": pct(sum(r["plan_source"] == "llm" for r in rows), n),
+        "plan_corrected_pct": pct(sum(bool(r["plan_added"]) for r in rows), n),
+        "llm_narrative_pct": pct(sum(r["narrative_source"] == "llm" for r in rows if r["narrative_source"]), n),
     }
 
 
@@ -103,16 +109,21 @@ def main() -> None:
         from eval import stub_models
         stub_models.install()
 
-    from agent.llm import get_llm
+    from agent.llm import get_llm, llm_preflight, ollama_settings, provider_name
     from agent.service import InvestigationService
 
     llm_on = get_llm() is not None
+    if llm_on:
+        ready, detail = llm_preflight()
+        if not ready:
+            sys.exit(f"LLM preflight failed: {detail}\nFix this, or pass --no-llm to evaluate the fallback path on purpose.")
     service = InvestigationService.create()
     rows = evaluate(service, load_cases(Path(args.cases)), sleep=args.sleep if llm_on else 0.0)
     summary = summarise(rows)
     meta = {
         "timestamp": datetime.now().isoformat(timespec="seconds"),
-        "llm_provider": os.getenv("LLM_PROVIDER", "groq") if llm_on else "none (heuristic fallback)",
+        "llm_provider": (provider_name() + (f" / {ollama_settings()['model']}" if provider_name() == "ollama" else ""))
+        if llm_on else "none (heuristic fallback)",
         "embeddings": os.getenv("EMBEDDINGS_PROVIDER", "huggingface"),
         "models": "STUB (not real model scores)" if args.stub_models else "real FraudShield artifacts",
     }

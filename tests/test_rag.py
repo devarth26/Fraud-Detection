@@ -65,3 +65,18 @@ def test_rule_boost_changes_ranking():
         return [h["doc_id"] for h in hits].index("POL-006")
 
     assert rank(boosted) < rank(plain)
+
+
+def test_titles_do_not_repeat_the_document_id():
+    docs = load_documents()
+    assert all(not d.metadata["title"].startswith(("POL-", "CASE-")) for d in docs)
+    assert next(d for d in docs if d.metadata["doc_id"] == "POL-004").metadata["title"].startswith("Money Mule")
+
+
+def test_required_actions_are_parsed_per_policy_and_returned_with_hits():
+    docs = {d.metadata["doc_id"]: d for d in load_documents()}
+    assert any("two independent analyst approvals" in a for a in docs["POL-005"].metadata["required_actions"])
+    assert docs["POL-001"].metadata["required_actions"][0].startswith("Place a temporary hold")
+    assert docs["POL-010"].metadata["required_actions"] == []  # this policy has no "Required actions" section
+    hit = get_test_retriever().search("micro transactions", k=1, rule_codes=["MICRO_TRANSACTION_CARD_TEST"])[0]
+    assert hit["doc_id"] == "POL-001" and len(hit["required_actions"]) >= 3

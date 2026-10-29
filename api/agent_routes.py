@@ -77,8 +77,12 @@ def cases(limit: int = 50):
 
 @router.get("/agent/health", tags=["agent"])
 def agent_health():
+    from agent.llm import llm_preflight, provider_name
+
+    ready, detail = llm_preflight()
     return {
-        "llm_provider": os.getenv("LLM_PROVIDER", "groq"),
-        "llm_configured": bool(os.getenv("GROQ_API_KEY")) or os.getenv("LLM_PROVIDER", "groq") == "bedrock",
+        "llm_provider": provider_name(),
+        "llm_ready": ready,
+        "llm_detail": detail,
         "embeddings_provider": os.getenv("EMBEDDINGS_PROVIDER", "huggingface"),
     }

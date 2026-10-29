@@ -43,3 +43,10 @@ def test_invalid_decision_and_conflicting_inputs_are_422(client):
     assert client.post("/agent/review/x", json={"decision": "maybe"}).status_code == 422
     both = {"query": "why flagged?", "transaction_id": 1, "transaction": LOW_TX}
     assert client.post("/agent/investigate", json=both).status_code == 422
+
+
+def test_health_reports_llm_readiness(client, monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "none")
+    body = client.get("/agent/health").json()
+    assert body["llm_ready"] is False and "disabled" in body["llm_detail"]
+    assert body["llm_provider"] == "none"
