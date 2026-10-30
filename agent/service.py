@@ -48,6 +48,7 @@ class InvestigationService:
             "intent_source": v.get("intent_source"),
             "plan_source": v.get("plan_source"),
             "plan_added": v.get("plan_added", []),
+            "plan_removed": v.get("plan_removed", []),
             "planned_tools": v.get("planned_tools", []),
             "tools_used": v.get("tools_used", []),
             "risk_tier": v.get("risk_tier"),

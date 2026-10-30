@@ -49,6 +49,7 @@ def evaluate(service, cases: list[dict], sleep: float = 0.0) -> list[dict]:
             "intent_source": resp["intent_source"],
             "plan_source": resp["plan_source"],
             "plan_added": resp.get("plan_added", []),
+            "plan_removed": resp.get("plan_removed", []),
             "narrative_source": resp["narrative_source"],
             "tools_used": sorted(used),
             "tools_expected": sorted(expected),
@@ -87,7 +88,11 @@ def summarise(rows: list[dict]) -> dict:
         # How often the LLM actually did the work. Near 0 with an LLM configured means it is failing silently.
         "llm_intent_pct": pct(sum(r["intent_source"] == "llm" for r in rows), n),
         "llm_plan_pct": pct(sum(r["plan_source"] == "llm" for r in rows), n),
-        "plan_corrected_pct": pct(sum(bool(r["plan_added"]) for r in rows), n),
+        "plan_corrected_pct": pct(sum(bool(r["plan_added"] or r["plan_removed"]) for r in rows), n),
+        # What the LLM did on its own, before any code correction (intent guards are visible via intent_source):
+        "tool_set_exact_llm_only_pct": pct(
+            sum(((set(r["tools_used"]) - set(r["plan_added"])) | set(r["plan_removed"])) == set(r["tools_expected"]) for r in rows), n),
+        "llm_intent_correct_pct": pct(sum(r["intent_source"] == "llm" and r["intent_ok"] for r in rows), n),
         "llm_narrative_pct": pct(sum(r["narrative_source"] == "llm" for r in rows if r["narrative_source"]), n),
     }
 

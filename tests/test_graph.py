@@ -270,3 +270,73 @@ def test_template_path_renders_the_policy_steps_too():
     r = svc.investigate("Why was this flagged and what should I do?", transaction=CARD_TEST_TX)
     assert "## Recommended actions" in r["report"]
     assert "Place a temporary hold on the card" in r["report"]  # POL-001 step 1
+
+
+def test_extra_tools_the_llm_adds_to_a_history_question_are_removed_and_recorded():
+    def script(prompt):
+        if "route questions" in prompt:
+            return '{"intent": "history_check"}'
+        if "plan tool calls" in prompt:
+            return '{"tools": ["get_card_history", "score_transaction", "search_policy"]}'
+        return "{}"
+    svc, fb = make_service(llm=FakeLLM(script))
+    r = svc.investigate("Show me this card's spending history", transaction=LOW_TX)
+    assert r["tools_used"] == ["get_card_history"] and fb.score_calls == 0
+    assert r["plan_removed"] == ["score_transaction", "search_policy"]
+    assert any("extra tools removed" in t for t in r["trace"])
+
+
+# ---------------------------------------------------------------- persona labels and retrieval
+def _spy_service(score_fn):
+    fb = FakeBackends(score_fn=score_fn)
+    backends = fb.build()
+    calls = []
+    original = backends.search_policy
+
+    def spy(q, k=4, rule_codes=None, personas=None):
+        calls.append({"query": q, "rules": rule_codes, "personas": personas})
+        return original(q, k=k, rule_codes=rule_codes, personas=personas)
+
+    backends.search_policy = spy
+    return InvestigationService(build_graph(backends=backends, llm=None)), calls
+
+
+def _synthetic_label(tx):
+    from .fakes import make_score
+
+    return make_score("MEDIUM", 0.5, ["HIGH_AMOUNT"], "SYNTHETIC_IDENTITY", "Synthetic Identity Fraud")
+
+
+def _takeover_label(tx):
+    from .fakes import make_score
+
+    return make_score("MEDIUM", 0.5, ["HIGH_AMOUNT"], "ACCOUNT_TAKEOVER", "Account Takeover")
+
+
+def test_a_contradicted_persona_does_not_steer_retrieval_by_default():
+    svc, calls = _spy_service(_synthetic_label)
+    r = svc.investigate("Why was this flagged and what should I do?", transaction=LOW_TX)  # card is 30 months old
+    assert calls[0]["personas"] == [] and "Synthetic Identity" not in calls[0]["query"]
+    assert "POL-003" not in r["policies_cited"]
+
+
+def test_a_persona_the_data_supports_still_steers_retrieval():
+    svc, calls = _spy_service(_synthetic_label)
+    svc.investigate("Why was this flagged and what should I do?", transaction=CARD_TEST_TX)  # card is 1 month old
+    assert calls[0]["personas"] == ["SYNTHETIC_IDENTITY"]
+    svc, calls = _spy_service(_takeover_label)
+    svc.investigate("Why was this flagged and what should I do?", transaction=LOW_TX)  # takeover is never gated
+    assert calls[0]["personas"] == ["ACCOUNT_TAKEOVER"] and "Account Takeover" in calls[0]["query"]
+
+
+def test_persona_mode_all_restores_the_old_behaviour_and_off_removes_it(monkeypatch):
+    import agent.nodes
+
+    monkeypatch.setattr(agent.nodes, "PERSONA_MODE", "all")
+    svc, calls = _spy_service(_synthetic_label)
+    r = svc.investigate("Why was this flagged and what should I do?", transaction=LOW_TX)
+    assert calls[0]["personas"] == ["SYNTHETIC_IDENTITY"] and "POL-003" in r["policies_cited"]
+    monkeypatch.setattr(agent.nodes, "PERSONA_MODE", "off")
+    svc, calls = _spy_service(_takeover_label)
+    svc.investigate("Why was this flagged and what should I do?", transaction=LOW_TX)
+    assert calls[0]["personas"] == []

@@ -14,6 +14,7 @@ class InvestigationState(TypedDict, total=False):
     planned_tools: list[str]
     plan_source: str            # "llm" | "heuristic"
     plan_added: list[str]       # tools the floor added because the planner left them out
+    plan_removed: list[str]     # extra tools the clamp removed from a single-purpose intent
     needs_input: Optional[str]  # set when the agent cannot proceed (missing/unknown transaction)
 
     # tool outputs

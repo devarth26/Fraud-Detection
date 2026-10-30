@@ -42,16 +42,10 @@ INTENT_REQUIRED = {
 INTENT_ALLOWED = {
     "history_check": ["get_card_history"],
     "policy_question": ["search_policy"],
+    "explain_flag": ["score_transaction", "explain_shap"],
+    "recommend_action": ["score_transaction", "search_policy"],
 }
 
-
-# def apply_required_tools(tools: list[str], intent: str) -> tuple[list[str], list[str]]:
-#     """Clamp single-purpose intents, then add any tool the intent cannot do without."""
-#     allowed = INTENT_ALLOWED.get(intent)
-#     if allowed is not None:
-#         tools = [t for t in tools if t in allowed]
-#     added = [t for t in INTENT_REQUIRED[intent] if t not in tools]
-#     return [t for t in PLANNABLE if t in set(tools) | set(added)], added
 
 TOOL_ORDER = ["lookup_transaction", "score_transaction", "explain_shap", "get_card_history", "search_policy"]
 PLANNABLE = [t for t in TOOL_ORDER if t != "lookup_transaction"]  # lookup is added automatically
@@ -60,7 +54,7 @@ NEEDS_TRANSACTION = {"score_transaction", "explain_shap", "get_card_history"}
 _TX_ID_RE = re.compile(r"(?:\b(?:transaction|txn|tx|id)\b\s*(?:#|no\.?|number|:)?\s*(\d{1,12}))|(?:#(\d{1,12}))", re.IGNORECASE)
 
 _WHY = ["why", "explain", "reason", "flagged", "flag", "what triggered", "how come"]
-_ACTION = ["what should", "what do i do", "recommend", "next step", "action", "how should", "should i", "what now", "do about", "handle"]
+_ACTION = ["what should", "what do i do", "recommend", "next step", "action", "how should", "should i", "what now", "do about", "proceed", "what to do", "handle"]
 _HISTORY = ["history", "previous", "past transactions", "baseline", "spending pattern", "behaviour", "behavior", "usually spend"]
 _POLICY = ["policy", "procedure", "threshold", "sla", "service level", "guideline", "when must", "when do we", "how long", "retention"]
 
@@ -125,6 +119,10 @@ def classify_intent(llm, query: str, has_transaction: bool) -> tuple[str, str]:
             # Guard 2: full_investigation needs both a "why" and an "action" in the question.
             if intent == "full_investigation" and rule in ("explain_flag", "recommend_action"):
                 return rule, "guard"
+                        # Guard 3: the wording asks for both a reason and an action, but the LLM picked only one.
+            q = (query or "").lower()
+            if has_transaction and intent in ("explain_flag", "recommend_action") and _has(q, _WHY) and _has(q, _ACTION):
+                return "full_investigation", "guard"
             return intent, "llm"
     return rule, "heuristic"
 
@@ -155,6 +153,14 @@ def apply_required_tools(tools: list[str], intent: str) -> tuple[list[str], list
     """Add any tool the intent cannot do without. Returns (tools, names_added)."""
     added = [t for t in INTENT_REQUIRED[intent] if t not in tools]
     return [t for t in PLANNABLE if t in set(tools) | set(added)], added
+
+
+def clamp_tools(tools: list[str], intent: str) -> tuple[list[str], list[str]]:
+    """Single-purpose intents may not pick up extra tools. Returns (kept, removed)."""
+    allowed = INTENT_ALLOWED.get(intent)
+    if allowed is None:
+        return tools, []
+    return [t for t in tools if t in allowed], [t for t in tools if t not in allowed]
 
 
 def enforce_dependencies(tools: list[str], has_inline_transaction: bool, transaction_id: int | None):

@@ -108,3 +108,44 @@ def test_planning_prompt_includes_the_default_plan_for_the_intent():
     llm = FakeLLM(lambda p: '{"tools": ["score_transaction"]}')
     choose_tools(llm, "why flagged?", "explain_flag")
     assert "Default plan for this intent: ['score_transaction', 'explain_shap']" in llm.prompts[0]
+
+
+# ---------------------------------------------------------------- intent guards and the clamp
+def test_guard_overrides_llm_that_calls_a_transactionless_policy_question_something_else():
+    llm = FakeLLM(lambda p: '{"intent": "explain_flag"}')
+    assert classify_intent(llm, "What is our policy on temporary holds?", False) == ("policy_question", "guard")
+
+
+def test_guard_overrides_full_investigation_when_only_one_half_was_asked():
+    llm = FakeLLM(lambda p: '{"intent": "full_investigation"}')
+    assert classify_intent(llm, "Why was this flagged?", True) == ("explain_flag", "guard")
+
+
+def test_guards_do_not_override_a_correct_llm_answer():
+    llm = FakeLLM(lambda p: '{"intent": "full_investigation"}')
+    assert classify_intent(llm, "Why was this transaction flagged, and what should I do?", True) == ("full_investigation", "llm")
+
+
+def test_clamp_removes_extra_tools_from_single_purpose_intents_and_reports_them():
+    from agent.planner import clamp_tools
+
+    kept, removed = clamp_tools(["score_transaction", "get_card_history", "search_policy"], "history_check")
+    assert kept == ["get_card_history"] and removed == ["score_transaction", "search_policy"]
+    assert clamp_tools(["score_transaction", "search_policy"], "policy_question") == (["search_policy"], ["score_transaction"])
+
+
+def test_clamp_leaves_multi_tool_intents_alone():
+    from agent.planner import clamp_tools
+
+    tools = ["score_transaction", "explain_shap", "get_card_history", "search_policy"]
+    assert clamp_tools(tools, "full_investigation") == (tools, [])
+
+
+def test_guard_upgrades_to_full_investigation_when_wording_asks_for_reason_and_action():
+    llm = FakeLLM(lambda p: '{"intent": "explain_flag"}')
+    assert classify_intent(llm, "Explain this flag and recommend what to do next.", True) == ("full_investigation", "guard")
+
+
+def test_proceed_counts_as_an_action_request():
+    from agent.planner import heuristic_intent
+    assert heuristic_intent("Walk me through why this was held and how to proceed.", True) == "full_investigation"

@@ -54,6 +54,25 @@ def driver_line(score: dict) -> str | None:
     return None
 
 
+SYNTHETIC_MAX_CARD_AGE_MONTHS = 6
+
+
+def persona_contradicted(persona_type: str, tx: dict | None) -> bool:
+    """True when the transaction's own data rules a persona out (currently: synthetic identity on a card
+    that is 6+ months old). FraudShield's synthetic-identity score is driven mostly by "no history on record"."""
+    age = (tx or {}).get("card_age_months")
+    return persona_type == "SYNTHETIC_IDENTITY" and age is not None and age >= SYNTHETIC_MAX_CARD_AGE_MONTHS
+
+
+def retrieval_personas(personas: list[dict], tx: dict | None, mode: str = "gated") -> list[dict]:
+    """Which detected personas may steer policy retrieval. off: none; all: every one; gated: drop contradicted ones."""
+    if mode == "off":
+        return []
+    if mode == "all":
+        return list(personas)
+    return [p for p in personas if not persona_contradicted(p["type"], tx)]
+
+
 def persona_note(score: dict, tx: dict | None) -> str | None:
     """Flag a persona label that the transaction's own data contradicts.
 
@@ -62,7 +81,7 @@ def persona_note(score: dict, tx: dict | None) -> str | None:
     """
     persona = score["persona"]["primary_persona"]
     age = (tx or {}).get("card_age_months")
-    if persona["type"] == "SYNTHETIC_IDENTITY" and age is not None and age >= 6:
+    if persona_contradicted(persona["type"], tx):
         return (f"the persona label \"{persona['label']}\" conflicts with a card age of {age} months; it is driven "
                 "mainly by missing history, which is unreliable here. Treat the label with caution.")
     return None

@@ -11,6 +11,7 @@ from .planner import (
     NEEDS_TRANSACTION,
     apply_required_tools,
     choose_tools,
+    clamp_tools,
     classify_intent,
     enforce_dependencies,
     extract_transaction_id,
@@ -23,6 +24,7 @@ from .report import (
     llm_assessment,
     relevant_hits,
     render_actions,
+    retrieval_personas,
     review_section,
     sanitize_citations,
     template_assessment,
@@ -31,6 +33,12 @@ from .state import InvestigationState
 from .tools import build_tools
 
 REVIEW_THRESHOLD = float(os.getenv("REVIEW_THRESHOLD", "0.75"))
+# FraudShield persona labels are heuristic (hardcoded indicator lists; "no history" scores as synthetic identity),
+# so they are filtered before they may steer policy retrieval. RETRIEVAL_USE_PERSONA:
+#   gated (default) - drop a persona the transaction's own data contradicts, keep the rest
+#   all             - use every detected persona (the behaviour before this change)
+#   off             - rules only
+PERSONA_MODE = os.getenv("RETRIEVAL_USE_PERSONA", "gated").lower()
 VALID_DECISIONS = ("approve", "escalate", "dismiss")
 
 
@@ -68,6 +76,7 @@ class InvestigationNodes:
         tools, source = choose_tools(self.llm, state["query"], state["intent"])
         if not has_any_tx and state["intent"] == "policy_question":
             tools = [t for t in tools if t not in NEEDS_TRANSACTION] or ["search_policy"]
+        tools, removed = clamp_tools(tools, state["intent"])
         added: list[str] = []
         if has_any_tx or state["intent"] == "policy_question":
             tools, added = apply_required_tools(tools, state["intent"])
@@ -81,11 +90,12 @@ class InvestigationNodes:
                 "report": needs_input,
                 "trace": [f"plan_tools: cannot proceed - {needs_input}"],
             }
-        note = f", required tools added: {added}" if added else ""
+        note = (f", required tools added: {added}" if added else "") + (f", extra tools removed: {removed}" if removed else "")
         return {
             "planned_tools": ordered,
             "plan_source": source,
             "plan_added": added,
+            "plan_removed": removed,
             "trace": [f"plan_tools: {ordered} ({source}{note})"],
         }
 
@@ -145,16 +155,14 @@ class InvestigationNodes:
             return {"policy_hits": [], "trace": ["retrieve_policy: skipped"]}
         score = state.get("score")
         rules = score["rules"]["rules_triggered"] if score else []
-        personas = [p["type"] for p in score["persona"]["all_personas"]] if score else []
+        personas: list[dict] = []
         parts = [state["query"]]
         if score:
-            # Every detected persona is evidence, not just the top-ranked one: persona ranking can
-            # be wrong when the card has no history, and retrieval should not inherit that error.
-            labels = [p["label"] for p in score["persona"]["all_personas"] if p.get("label")]
-            parts += labels or [score["persona"]["primary_persona"]["label"]]
             parts += [r.replace("_", " ").lower() for r in rules]
+            personas = retrieval_personas(score["persona"]["all_personas"], state.get("transaction"), PERSONA_MODE)
+            parts += [p["label"] for p in personas if p.get("label")]
         hits = self.tools["search_policy"].invoke(
-            {"query": " ".join(parts), "rule_codes": rules, "personas": personas, "k": 4}
+            {"query": " ".join(parts), "rule_codes": rules, "personas": [p["type"] for p in personas], "k": 4}
         )
         return {
             "policy_hits": hits,

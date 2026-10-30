@@ -70,3 +70,23 @@ def test_render_actions_copies_steps_verbatim_and_uses_default_reasons():
     out = render_actions([hit], {})
     assert "- **[POL-001] Card Testing**: matches the triggered rule(s) MICRO_TRANSACTION_CARD_TEST" in out
     assert "  - Place a hold." in out and "  - Call the customer." in out
+
+
+def test_persona_contradicted_only_for_synthetic_identity_on_an_established_card():
+    from agent.report import persona_contradicted
+
+    assert persona_contradicted("SYNTHETIC_IDENTITY", {"card_age_months": 24})
+    assert not persona_contradicted("SYNTHETIC_IDENTITY", {"card_age_months": 2})
+    assert not persona_contradicted("SYNTHETIC_IDENTITY", None)
+    assert not persona_contradicted("ACCOUNT_TAKEOVER", {"card_age_months": 24})
+
+
+def test_retrieval_personas_modes():
+    from agent.report import retrieval_personas
+
+    ps = [{"type": "SYNTHETIC_IDENTITY"}, {"type": "ACCOUNT_TAKEOVER"}]
+    old = {"card_age_months": 36}
+    assert [p["type"] for p in retrieval_personas(ps, old, "gated")] == ["ACCOUNT_TAKEOVER"]
+    assert [p["type"] for p in retrieval_personas(ps, old, "all")] == ["SYNTHETIC_IDENTITY", "ACCOUNT_TAKEOVER"]
+    assert retrieval_personas(ps, old, "off") == []
+    assert [p["type"] for p in retrieval_personas(ps, {"card_age_months": 1}, "gated")] == ["SYNTHETIC_IDENTITY", "ACCOUNT_TAKEOVER"]
